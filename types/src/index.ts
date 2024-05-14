@@ -310,15 +310,23 @@ export interface EmitMetadata {
   ts?: number;
 }
 
+export interface IdEmitMetadata extends EmitMetadata {
+  id: string | number;
+}
+
 type EmitFunction = {
   $emit: (event: JSONValue, metadata?: EmitMetadata) => Promise<void>;
+};
+
+type IdEmitFunction = {
+  $emit: (event: JSONValue, metadata: IdEmitMetadata) => Promise<void>;
 };
 
 type PropThis<Props> = {
   [Prop in keyof Props]: Props[Prop] extends App<Methods, AppPropDefinitions> ? any : any
 };
 
-export interface Source<
+interface BaseSource<
   Methods,
   SourcePropDefinitions
 > {
@@ -334,8 +342,42 @@ export interface Source<
   additionalProps?: (
     previousPropDefs: SourcePropDefinitions
   ) => Promise<SourcePropDefinitions>;
+  run: (this: PropThis<SourcePropDefinitions> & Methods & ( EmitFunction | IdEmitFunction), options?: SourceRunOptions) => void | Promise<void>;
+}
+
+export interface LastSource<
+  Methods,
+  SourcePropDefinitions
+> extends BaseSource<
+  Methods,
+  SourcePropDefinitions
+> {
+  dedupe?: "last";
   run: (this: PropThis<SourcePropDefinitions> & Methods & EmitFunction, options?: SourceRunOptions) => void | Promise<void>;
 }
+
+
+export interface DedupedSource<
+  Methods,
+  SourcePropDefinitions
+> extends BaseSource<
+  Methods,
+  SourcePropDefinitions
+> {
+  dedupe: "greatest" | "unique";
+  run: (this: PropThis<SourcePropDefinitions> & Methods & IdEmitFunction, options?: SourceRunOptions) => void | Promise<void>;
+}
+
+export type Source<
+  Methods,
+  SourcePropDefinitions
+> = LastSource<
+  Methods,
+  SourcePropDefinitions
+> | DedupedSource<
+  Methods,
+  SourcePropDefinitions
+>;
 
 export function defineSource<
   Methods,
